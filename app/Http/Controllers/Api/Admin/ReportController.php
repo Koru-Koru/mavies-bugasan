@@ -46,6 +46,7 @@ class ReportController extends Controller
             'to' => ['nullable', 'date'],
             'basis' => ['nullable', Rule::in(ReportService::BASES)],
             'include_archived' => ['nullable', 'boolean'],
+            'inventory_id' => ['nullable', 'integer', Rule::exists('inventory', 'inventory_id')],
         ]);
     }
 

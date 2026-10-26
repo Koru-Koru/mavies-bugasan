@@ -20,7 +20,7 @@ class ReportService
 {
     public const BASES = ['ordered', 'delivered'];
 
-    public const REPORTS = ['summary', 'top-varieties', 'by-day', 'inventory', 'damage', 'credit'];
+    public const REPORTS = ['summary', 'top-varieties', 'variety', 'by-day', 'inventory', 'damage', 'credit'];
 
     public function build(string $report, array $filters = []): array
     {
@@ -170,6 +170,87 @@ class ReportService
             ],
             'rows' => $rows,
             'totals' => $totals,
+        ];
+    }
+
+    /**
+     * Sales for one chosen variety, broken down by day. This is the drill-down
+     * behind the "By variety" tab so a single variety's numbers can be read
+     * without scanning the all-varieties table.
+     */
+    private function variety(array $filters): array
+    {
+        [$basis, $from, $to, $subtitle] = $this->window($filters);
+
+        $variety = DB::table('inventory')
+            ->select('inventory_id', 'name', 'category', 'is_active')
+            ->where('inventory_id', (int) ($filters['inventory_id'] ?? 0))
+            ->first();
+
+        $columns = [
+            $this->column('day', 'Date'),
+            $this->column('orders', 'Orders', 'right', 'int'),
+            $this->column('sacks', 'Sacks', 'right', 'int'),
+            $this->column('revenue', 'Revenue', 'right', 'money'),
+        ];
+
+        if ($variety === null) {
+            return [
+                'key' => 'variety',
+                'title' => 'Sales by variety',
+                'subtitle' => 'Choose a variety',
+                'metrics' => [],
+                'columns' => $columns,
+                'rows' => [],
+                'totals' => null,
+                'empty' => 'Choose a variety to see its sales.',
+            ];
+        }
+
+        $label = $variety->name.($variety->is_active ? '' : ' (archived)');
+        $subtitle .= ' · '.$label;
+
+        $dayColumn = $basis === 'delivered' ? 'o.delivered_at' : 'o.created_at';
+        $scope = $basis === 'delivered'
+            ? "o.status = 'Delivered' AND o.delivered_at BETWEEN ? AND ?"
+            : "o.status <> 'Cancelled' AND o.created_at BETWEEN ? AND ?";
+
+        $raw = DB::select(
+            "SELECT DATE({$dayColumn}) AS day,
+                    COUNT(DISTINCT o.order_id) AS orders,
+                    COALESCE(SUM(oi.sacks), 0) AS sacks,
+                    COALESCE(SUM(oi.sacks * COALESCE(oi.final_unit_price, oi.unit_price)), 0) AS revenue
+               FROM order_items oi
+               JOIN orders o ON o.order_id = oi.order_id
+              WHERE {$scope}
+                AND oi.inventory_id = ?
+              GROUP BY DATE({$dayColumn})
+              ORDER BY day",
+            [$from, $to, $variety->inventory_id]
+        );
+
+        $rows = array_map(fn ($r) => $this->numericRow($r, ['orders', 'sacks', 'revenue']), $raw);
+
+        $totals = [
+            'orders' => array_sum(array_column($rows, 'orders')),
+            'sacks' => array_sum(array_column($rows, 'sacks')),
+        ];
+        $totals['revenue'] = array_sum(array_column($rows, 'revenue'));
+
+        return [
+            'key' => 'variety',
+            'title' => 'Sales — '.$variety->name,
+            'subtitle' => $subtitle,
+            'metrics' => [
+                $this->metric('Sacks sold', $totals['sacks'], 'int'),
+                $this->metric('Revenue', $totals['revenue'], 'money'),
+                $this->metric('Orders', $totals['orders'], 'int'),
+                $this->metric('Avg / sack', $totals['sacks'] > 0 ? $totals['revenue'] / $totals['sacks'] : 0, 'money'),
+            ],
+            'columns' => $columns,
+            'rows' => $rows,
+            'totals' => $totals,
+            'empty' => 'No sales for '.$variety->name.' in this period.',
         ];
     }
 

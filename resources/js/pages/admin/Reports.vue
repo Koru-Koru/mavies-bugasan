@@ -17,6 +17,15 @@
         <div class="card mb-3">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
+                    <div class="col-md-4" v-if="report === 'variety'">
+                        <label class="form-label">Variety</label>
+                        <select class="form-select" v-model="filters.inventory_id" @change="load">
+                            <option value="">Select a variety…</option>
+                            <option v-for="v in varieties" :key="v.inventory_id" :value="v.inventory_id">
+                                {{ v.name }} — {{ v.category }}{{ v.is_active ? '' : ' (archived)' }}
+                            </option>
+                        </select>
+                    </div>
                     <div class="col-md-3" v-if="hasRange">
                         <label class="form-label">From</label>
                         <input type="date" class="form-control" v-model="filters.from" @change="load" />
@@ -75,7 +84,7 @@
                                 </td>
                             </tr>
                             <tr v-if="!data.rows.length">
-                                <td :colspan="data.columns.length" class="text-center text-muted py-4">No records for this period.</td>
+                                <td :colspan="data.columns.length" class="text-center text-muted py-4">{{ data.empty || 'No records for this period.' }}</td>
                             </tr>
                         </tbody>
                         <tfoot v-if="data.totals">
@@ -104,10 +113,12 @@ export default {
             report: 'summary',
             loading: true,
             data: null,
-            filters: { from: '', to: '', basis: 'ordered', include_archived: false },
+            varieties: [],
+            filters: { from: '', to: '', basis: 'ordered', include_archived: false, inventory_id: '' },
             tabs: [
                 { key: 'summary', label: 'Summary' },
                 { key: 'top-varieties', label: 'Top varieties' },
+                { key: 'variety', label: 'Variety sales' },
                 { key: 'by-day', label: 'By day' },
                 { key: 'inventory', label: 'Inventory' },
                 { key: 'damage', label: 'Damage' },
@@ -117,10 +128,10 @@ export default {
     },
     computed: {
         hasRange() {
-            return ['summary', 'top-varieties', 'by-day', 'damage'].includes(this.report);
+            return ['summary', 'top-varieties', 'variety', 'by-day', 'damage'].includes(this.report);
         },
         hasBasis() {
-            return ['summary', 'top-varieties', 'by-day'].includes(this.report);
+            return ['summary', 'top-varieties', 'variety', 'by-day'].includes(this.report);
         },
     },
     methods: {
@@ -144,6 +155,9 @@ export default {
                 if (this.filters.to) params.set('to', this.filters.to);
             }
             if (this.hasBasis) params.set('basis', this.filters.basis);
+            if (this.report === 'variety' && this.filters.inventory_id) {
+                params.set('inventory_id', this.filters.inventory_id);
+            }
             if (this.report === 'inventory' && this.filters.include_archived) params.set('include_archived', '1');
             return params;
         },
@@ -154,7 +168,22 @@ export default {
         },
         select(key) {
             this.report = key;
+            if (key === 'variety' && !this.filters.inventory_id && this.varieties.length) {
+                const firstActive = this.varieties.find((v) => v.is_active) || this.varieties[0];
+                this.filters.inventory_id = firstActive.inventory_id;
+            }
             this.load();
+        },
+        async loadVarieties() {
+            try {
+                const r = await api.get('/api/admin/inventory', { params: { status: 'all', per_page: 100 } });
+                this.varieties = r.data.data.slice().sort((a, b) => {
+                    if (a.is_active !== b.is_active) return a.is_active ? -1 : 1;
+                    return a.name.localeCompare(b.name);
+                });
+            } catch (e) {
+                this.varieties = [];
+            }
         },
         async load() {
             this.loading = true;
@@ -170,12 +199,13 @@ export default {
             }
         },
     },
-    mounted() {
+    async mounted() {
         const now = new Date();
         const first = new Date(now.getFullYear(), now.getMonth(), 1);
         const iso = (d) => d.toISOString().slice(0, 10);
         this.filters.from = iso(first);
         this.filters.to = iso(now);
+        await this.loadVarieties();
         this.load();
     },
 };
