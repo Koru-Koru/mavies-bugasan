@@ -1,0 +1,16 @@
+// Mavies Bugasan — theme entry point.
+// Bootstrap 5 is imported as CSS only; its JavaScript is never used
+// (modals/dropdowns are Vue components — spec §3.2).
+
+@import 'variables';
+
+// Recolour Bootstrap's primary to the brand before importing it.
+$primary: $brand;
+$border-radius: $radius;
+
+@import '~bootstrap/scss/bootstrap';
+
+// Our depth layer, loaded after Bootstrap so it can override.
+@import 'buttons';
+@import 'forms';
+@import 'cards';

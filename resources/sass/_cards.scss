@@ -1,0 +1,17 @@
+// Cards: white face, hairline border, soft two-layer shadow (spec §6.1).
+
+.card {
+    border: 1px solid #e4e8ec;
+    border-radius: $radius;
+    box-shadow: $shadow-card;
+}
+
+.card-raised {
+    box-shadow: $shadow-raised;
+}
+
+.card-header {
+    background: linear-gradient(180deg, #fbfcfd, #f2f5f7);
+    border-bottom: 1px solid #e4e8ec;
+    font-weight: 600;
+}

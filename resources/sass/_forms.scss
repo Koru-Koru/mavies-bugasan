@@ -1,0 +1,24 @@
+// Inputs: visible border, clear focus, inline error hook (spec §6.3).
+
+.form-control,
+.form-select {
+    border-radius: $radius;
+    border: 1px solid #cfd6dd;
+    min-height: 44px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: $brand;
+    box-shadow: 0 0 0 3px rgba($brand, .18);
+}
+
+.form-control[aria-invalid='true'] {
+    border-color: $danger;
+}
+
+.field-error {
+    color: $danger;
+    font-size: .875rem;
+    margin-top: $space-1;
+}

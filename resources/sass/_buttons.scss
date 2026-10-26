@@ -1,0 +1,29 @@
+// The "depth" layer — 2010s layered surfaces with modern restraint (spec §6.1).
+// Buttons sit on a gradient face, carry a hard edge and a small shadow, and
+// physically depress on press.
+
+.btn {
+    border-radius: $radius;
+    box-shadow: $shadow-card;
+    transition: transform .05s ease, box-shadow .05s ease;
+}
+
+.btn:not(.btn-link):active {
+    transform: translateY(1px);
+    box-shadow: $shadow-press;
+}
+
+.btn-primary {
+    background-image: linear-gradient(180deg, $brand-light, $brand);
+    border-color: $brand-dark;
+}
+
+.btn-primary:hover {
+    background-image: linear-gradient(180deg, $brand, $brand-dark);
+    border-color: $brand-dark;
+}
+
+.btn:focus-visible {
+    outline: 3px solid rgba($brand, .35);
+    outline-offset: 1px;
+}
