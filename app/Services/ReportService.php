@@ -127,6 +127,15 @@ class ReportService
             ? "o.status = 'Delivered' AND o.delivered_at BETWEEN ? AND ?"
             : "o.status <> 'Cancelled' AND o.created_at BETWEEN ? AND ?";
 
+        $bindings = [$from, $to];
+        $category = $filters['category'] ?? null;
+
+        if (! empty($category)) {
+            $scope .= ' AND i.category = ?';
+            $bindings[] = $category;
+            $subtitle .= ' · '.$category;
+        }
+
         $raw = DB::select(
             "SELECT i.inventory_id,
                     i.name,
@@ -141,7 +150,7 @@ class ReportService
               GROUP BY i.inventory_id, i.name, i.category
               ORDER BY sacks DESC, revenue DESC
               LIMIT 100",
-            [$from, $to]
+            $bindings
         );
 
         $rows = array_map(fn ($r) => $this->numericRow($r, ['sacks', 'revenue', 'orders']), $raw);

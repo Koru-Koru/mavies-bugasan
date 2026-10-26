@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Domain\InventoryCategory;
 use App\Http\Controllers\Controller;
 use App\Services\ReportService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -47,6 +48,7 @@ class ReportController extends Controller
             'basis' => ['nullable', Rule::in(ReportService::BASES)],
             'include_archived' => ['nullable', 'boolean'],
             'inventory_id' => ['nullable', 'integer', Rule::exists('inventory', 'inventory_id')],
+            'category' => ['nullable', Rule::in(InventoryCategory::ALL)],
         ]);
     }
 

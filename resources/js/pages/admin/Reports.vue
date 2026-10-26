@@ -17,11 +17,21 @@
         <div class="card mb-3">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
+                    <div class="col-md-3" v-if="report === 'variety' || report === 'top-varieties'">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" v-model="filters.category" @change="onCategoryChange">
+                            <option value="">All categories</option>
+                            <option>Local</option>
+                            <option>Imported</option>
+                            <option>Japanese</option>
+                            <option>Thailand</option>
+                        </select>
+                    </div>
                     <div class="col-md-4" v-if="report === 'variety'">
                         <label class="form-label">Variety</label>
                         <select class="form-select" v-model="filters.inventory_id" @change="load">
                             <option value="">Select a variety…</option>
-                            <option v-for="v in varieties" :key="v.inventory_id" :value="v.inventory_id">
+                            <option v-for="v in varietyChoices" :key="v.inventory_id" :value="v.inventory_id">
                                 {{ v.name }} — {{ v.category }}{{ v.is_active ? '' : ' (archived)' }}
                             </option>
                         </select>
@@ -114,7 +124,7 @@ export default {
             loading: true,
             data: null,
             varieties: [],
-            filters: { from: '', to: '', basis: 'ordered', include_archived: false, inventory_id: '' },
+            filters: { from: '', to: '', basis: 'ordered', include_archived: false, inventory_id: '', category: '' },
             tabs: [
                 { key: 'summary', label: 'Summary' },
                 { key: 'top-varieties', label: 'Top varieties' },
@@ -132,6 +142,10 @@ export default {
         },
         hasBasis() {
             return ['summary', 'top-varieties', 'variety', 'by-day'].includes(this.report);
+        },
+        varietyChoices() {
+            if (!this.filters.category) return this.varieties;
+            return this.varieties.filter((v) => v.category === this.filters.category);
         },
     },
     methods: {
@@ -158,6 +172,9 @@ export default {
             if (this.report === 'variety' && this.filters.inventory_id) {
                 params.set('inventory_id', this.filters.inventory_id);
             }
+            if (this.filters.category && ['top-varieties', 'variety'].includes(this.report)) {
+                params.set('category', this.filters.category);
+            }
             if (this.report === 'inventory' && this.filters.include_archived) params.set('include_archived', '1');
             return params;
         },
@@ -168,10 +185,21 @@ export default {
         },
         select(key) {
             this.report = key;
-            if (key === 'variety' && !this.filters.inventory_id && this.varieties.length) {
-                const firstActive = this.varieties.find((v) => v.is_active) || this.varieties[0];
-                this.filters.inventory_id = firstActive.inventory_id;
+            if (key === 'variety') {
+                this.pickVarietyIfMissing();
             }
+            this.load();
+        },
+        pickVarietyIfMissing() {
+            const list = this.varietyChoices;
+            const stillListed = list.some((v) => Number(v.inventory_id) === Number(this.filters.inventory_id));
+            if (stillListed) return;
+
+            const firstActive = list.find((v) => v.is_active) || list[0];
+            this.filters.inventory_id = firstActive ? firstActive.inventory_id : '';
+        },
+        onCategoryChange() {
+            this.pickVarietyIfMissing();
             this.load();
         },
         async loadVarieties() {
@@ -202,7 +230,7 @@ export default {
     async mounted() {
         const now = new Date();
         const first = new Date(now.getFullYear(), now.getMonth(), 1);
-        const iso = (d) => d.toISOString().slice(0, 10);
+        const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         this.filters.from = iso(first);
         this.filters.to = iso(now);
         await this.loadVarieties();
