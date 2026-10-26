@@ -115,6 +115,14 @@
         font-size: 12px;
         font-weight: 700;
     }
+    .req {
+        color: var(--red);
+        font-weight: 800;
+    }
+    .addr-hint {
+        margin: 0 0 10px;
+        font-size: 12px;
+    }
     .check-invalid {
         color: var(--red);
 

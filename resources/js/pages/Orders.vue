@@ -199,17 +199,44 @@
                     </div>
 
                     <template v-if="method !== 'Pickup'">
+                        <p class="hint addr-hint">Delivery address is required for {{ method }} orders.</p>
                         <div class="field">
-                            <label class="label">House / Street</label>
-                            <input v-model.trim="addr.street" class="input" type="text">
+                            <label class="label">House / Street <span class="req">*</span></label>
+                            <input
+                                ref="addrStreet"
+                                v-model.trim="addr.street"
+                                class="input"
+                                :class="{ 'input-invalid': addressInvalid.street }"
+                                type="text"
+                                autocomplete="street-address"
+                                @blur="addrTouched.street = true"
+                            >
+                            <p v-if="addressInvalid.street" class="field-error">Enter the house number and street.</p>
                         </div>
                         <div class="field">
-                            <label class="label">Barangay</label>
-                            <input v-model.trim="addr.brgy" class="input" type="text">
+                            <label class="label">Barangay <span class="req">*</span></label>
+                            <input
+                                ref="addrBrgy"
+                                v-model.trim="addr.brgy"
+                                class="input"
+                                :class="{ 'input-invalid': addressInvalid.brgy }"
+                                type="text"
+                                @blur="addrTouched.brgy = true"
+                            >
+                            <p v-if="addressInvalid.brgy" class="field-error">Enter the barangay.</p>
                         </div>
                         <div class="field">
-                            <label class="label">City / Municipality</label>
-                            <input v-model.trim="addr.city" class="input" type="text">
+                            <label class="label">City / Municipality <span class="req">*</span></label>
+                            <input
+                                ref="addrCity"
+                                v-model.trim="addr.city"
+                                class="input"
+                                :class="{ 'input-invalid': addressInvalid.city }"
+                                type="text"
+                                autocomplete="address-level2"
+                                @blur="addrTouched.city = true"
+                            >
+                            <p v-if="addressInvalid.city" class="field-error">Enter the city or municipality.</p>
                         </div>
                     </template>
 
@@ -348,6 +375,7 @@ export default {
             maxLines: 20,
             method: 'Pickup',
             addr: { street: '', brgy: '', city: '' },
+            addrTouched: { street: false, brgy: false, city: false },
             staff_notes: '',
             paymentMethod: 'Cash',
             paymentMethods: [
@@ -377,6 +405,17 @@ export default {
         },
         needsProof() {
             return this.paymentMethod === 'GCash' || this.paymentMethod === 'Maya';
+        },
+        addressInvalid() {
+            if (this.method === 'Pickup') {
+                return { street: false, brgy: false, city: false };
+            }
+
+            return {
+                street: this.addrTouched.street && !this.addr.street,
+                brgy: this.addrTouched.brgy && !this.addr.brgy,
+                city: this.addrTouched.city && !this.addr.city,
+            };
         },
         onlinePayment() {
             return this.paymentMethods.find((pm) => pm.value === this.paymentMethod && pm.qr) || null;
@@ -602,6 +641,7 @@ export default {
             this.lines = [this.blankLine()];
             this.method = 'Pickup';
             this.addr = { street: '', brgy: '', city: '' };
+            this.addrTouched = { street: false, brgy: false, city: false };
             this.staff_notes = '';
             this.paymentMethod = 'Cash';
             this.removeProof();
@@ -627,9 +667,19 @@ export default {
                 this.error = `Only ${this.stockLeft(over)} sack${this.stockLeft(over) === 1 ? '' : 's'} of ${item ? item.name : 'that variety'} available.`;
                 return;
             }
-            if (this.method !== 'Pickup' && (!this.addr.street || !this.addr.brgy || !this.addr.city)) {
-                this.error = 'Complete the delivery address (street, barangay, city).';
-                return;
+            if (this.method !== 'Pickup') {
+                this.addrTouched = { street: true, brgy: true, city: true };
+
+                if (!this.addr.street || !this.addr.brgy || !this.addr.city) {
+                    this.error = 'Complete the delivery address (house/street, barangay, city).';
+
+                    this.$nextTick(() => {
+                        const ref = !this.addr.street ? 'addrStreet' : (!this.addr.brgy ? 'addrBrgy' : 'addrCity');
+                        if (this.$refs[ref]) this.$refs[ref].focus();
+                    });
+
+                    return;
+                }
             }
 
             this.error = '';
