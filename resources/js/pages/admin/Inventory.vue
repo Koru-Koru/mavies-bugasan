@@ -68,10 +68,11 @@
                     <option value="low">Low stock</option>
                     <option value="out">Out of stock</option>
                 </select>
-                <div class="form-check align-self-center">
-                    <input class="form-check-input" type="checkbox" id="showArchived" v-model="filters.include_archived" />
-                    <label class="form-check-label" for="showArchived">Include archived</label>
-                </div>
+                <select class="form-select" style="max-width: 170px" v-model="filters.status" @change="loadItems(1)">
+                    <option value="active">Active only</option>
+                    <option value="archived">Archived only</option>
+                    <option value="all">All varieties</option>
+                </select>
                 <button class="btn btn-primary" type="submit">Filter</button>
             </div>
         </form>
@@ -107,6 +108,9 @@
                                 <span class="badge" :class="item.is_active ? 'text-bg-success' : 'text-bg-secondary'">
                                     {{ item.is_active ? 'Active' : 'Archived' }}
                                 </span>
+                                <div v-if="!item.is_active && item.archived_at" class="small text-muted mt-1">
+                                    {{ fmtDateTime(item.archived_at) }}
+                                </div>
                             </td>
                             <td class="text-end">
                                 <button class="btn btn-sm btn-outline-secondary me-1" @click="toggleMovements(item.inventory_id)">
@@ -119,7 +123,7 @@
                             </td>
                         </tr>
                         <tr v-if="!items.length">
-                            <td colspan="7" class="text-center text-muted py-4">Nothing here.</td>
+                            <td colspan="7" class="text-center text-muted py-4">{{ emptyMessage }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -291,7 +295,7 @@ export default {
             items: [],
             pagination: null,
             loading: true,
-            filters: { q: '', category: '', stock_status: '', include_archived: false },
+            filters: { q: '', category: '', stock_status: '', status: 'active' },
             showCreate: false,
             form: { name: '', category: 'Local', unit_price: null, wholesale_price: null, initial_stock: null, low_stock_threshold: 10 },
             busyCreate: false,
@@ -320,6 +324,11 @@ export default {
             const v = this.editForm.wholesale_price;
             return v === '' || v === null || v === undefined || Number.isNaN(Number(v));
         },
+        emptyMessage() {
+            if (this.filters.status === 'archived') return 'No archived varieties.';
+            if (this.filters.status === 'all') return 'No varieties match these filters.';
+            return 'No active varieties match these filters.';
+        },
     },
     methods: {
         money,
@@ -331,7 +340,7 @@ export default {
                 if (this.filters.q) params.q = this.filters.q;
                 if (this.filters.category) params.category = this.filters.category;
                 if (this.filters.stock_status) params.stock_status = this.filters.stock_status;
-                if (this.filters.include_archived) params.include_archived = 1;
+                params.status = this.filters.status || 'active';
                 const r = await api.get('/api/admin/inventory', { params });
                 this.items = r.data.data;
                 this.pagination = r.data.pagination;

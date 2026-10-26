@@ -19,7 +19,15 @@ class InventoryController extends Controller
     {
         $query = InventoryItem::query();
 
-        if (! $request->boolean('include_archived')) {
+        // status: active (default), archived (only), all. include_archived is
+        // still honoured for older callers that only send the checkbox.
+        $status = (string) $request->input('status', '');
+
+        if ($status === 'archived') {
+            $query->where('is_active', false);
+        } elseif ($status === 'all') {
+            // no filter - show both
+        } elseif (! $request->boolean('include_archived')) {
             $query->where('is_active', true);
         }
         if ($request->filled('category')) {
