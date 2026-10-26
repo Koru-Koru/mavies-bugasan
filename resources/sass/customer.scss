@@ -97,6 +97,34 @@
     }
     textarea { resize: vertical; }
 
+    // Incomplete required field (see SignIn.vue) — red border before submit.
+    input.input-invalid,
+    select.input-invalid,
+    textarea.input-invalid {
+        border-color: var(--red);
+        background: #FFF7F6;
+
+        &:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(239, 107, 94, 0.16);
+        }
+    }
+    .field-error {
+        margin: 0;
+        color: var(--red);
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .check-invalid {
+        color: var(--red);
+
+        input[type='checkbox'] {
+            outline: 2px solid var(--red);
+            outline-offset: 2px;
+            border-radius: 3px;
+        }
+    }
+
     .check {
         display: flex;
         gap: 10px;

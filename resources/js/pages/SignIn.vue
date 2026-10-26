@@ -19,12 +19,36 @@
 
             <div class="field">
                 <label class="label" for="identifier">Phone or Email</label>
-                <input id="identifier" v-model.trim="form.identifier" class="input" type="text" autocomplete="username" placeholder="09171234567 or you@email.com">
+                <input
+                    id="identifier"
+                    ref="identifierInput"
+                    v-model.trim="form.identifier"
+                    class="input"
+                    :class="{ 'input-invalid': identifierInvalid }"
+                    :aria-invalid="identifierInvalid"
+                    type="text"
+                    autocomplete="username"
+                    placeholder="09171234567 or you@email.com"
+                    @blur="touched.identifier = true"
+                >
+                <p v-if="identifierInvalid" class="field-error">Enter your phone or email.</p>
             </div>
 
             <div class="field">
                 <label class="label" for="password">Password</label>
-                <input id="password" v-model="form.password" class="input" type="password" autocomplete="current-password" placeholder="Your password">
+                <input
+                    id="password"
+                    ref="passwordInput"
+                    v-model="form.password"
+                    class="input"
+                    :class="{ 'input-invalid': passwordInvalid }"
+                    :aria-invalid="passwordInvalid"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="Your password"
+                    @blur="touched.password = true"
+                >
+                <p v-if="passwordInvalid" class="field-error">Enter your password.</p>
                 <router-link class="forgot-link" to="/forgot-password">Forgot password?</router-link>
             </div>
 
@@ -35,10 +59,11 @@
                 </label>
             </div>
             <div class="field">
-                <label class="check">
-                    <input v-model="form.terms" type="checkbox">
+                <label class="check" :class="{ 'check-invalid': termsInvalid }">
+                    <input ref="termsInput" v-model="form.terms" type="checkbox" @change="touched.terms = true">
                     I accept the terms and conditions
                 </label>
+                <p v-if="termsInvalid" class="field-error">Please accept the terms and conditions.</p>
             </div>
 
             <p v-if="error" class="error">{{ error }}</p>
@@ -62,18 +87,35 @@ export default {
     data() {
         return {
             form: { identifier: '', password: '', remember: false, terms: false },
+            touched: { identifier: false, password: false, terms: false },
             error: '',
             busy: false,
         };
     },
+    computed: {
+        identifierInvalid() {
+            return this.touched.identifier && !this.form.identifier;
+        },
+        passwordInvalid() {
+            return this.touched.password && !this.form.password;
+        },
+        termsInvalid() {
+            return this.touched.terms && !this.form.terms;
+        },
+    },
     methods: {
     async submit() {
-            if (!this.form.terms) {
-                this.error = 'Please accept the terms and conditions to continue.';
-                return;
-            }
-            if (!this.form.identifier || !this.form.password) {
-                this.error = 'Enter your phone or email and password.';
+            this.touched = { identifier: true, password: true, terms: true };
+
+            if (this.identifierInvalid || this.passwordInvalid || this.termsInvalid) {
+                this.error = '';
+
+                this.$nextTick(() => {
+                    if (this.identifierInvalid) this.$refs.identifierInput.focus();
+                    else if (this.passwordInvalid) this.$refs.passwordInput.focus();
+                    else if (this.termsInvalid) this.$refs.termsInput.focus();
+                });
+
                 return;
             }
             this.error = '';
